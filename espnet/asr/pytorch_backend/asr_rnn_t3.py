@@ -33,12 +33,12 @@ from espnet.asr.asr_utils import snapshot_object
 from espnet.asr.asr_utils import torch_load
 from espnet.asr.asr_utils import torch_resume
 from espnet.asr.asr_utils import torch_snapshot
-from espnet.asr.pytorch_backend.asr_init_rnn import freeze_modules
-from espnet.asr.pytorch_backend.asr_init_rnn import load_trained_model
-from espnet.asr.pytorch_backend.asr_init_rnn import load_trained_modules
+from espnet.asr.pytorch_backend.asr_init_rnn_t3 import freeze_modules
+from espnet.asr.pytorch_backend.asr_init_rnn_t3 import load_trained_model
+from espnet.asr.pytorch_backend.asr_init_rnn_t3 import load_trained_modules
 import espnet.lm.pytorch_backend.extlm as extlm_pytorch
 from espnet.nets.asr_interface import ASRInterface
-# from espnet.nets.beam_search_transducer import BeamSearchTransducer
+from espnet.nets.beam_search_transducer import BeamSearchTransducer
 from espnet.nets.pytorch_backend.e2e_asr import pad_list
 import espnet.nets.pytorch_backend.lm.default as lm_pytorch
 from espnet.nets.pytorch_backend.streaming.segment import SegmentStreamingE2E
@@ -437,18 +437,6 @@ def train(args):
 
     if (args.enc_init is not None or args.dec_init is not None) and args.num_encs == 1:
         model = load_trained_modules(idim_list[0], odim, args)
-        # # 冻结模型参数，!!!全局微调，部分微调
-        # for param in model.parameters():
-        #     param.requires_grad = False
-
-        # # 解冻参数
-        # for param in model.dec.output.parameters():
-        #     param.requires_grad = True
-        # for param in model.dec.embed.parameters():
-        #     param.requires_grad = True
-        # for param in model.ctc.ctc_lo.parameters():
-        #     param.requires_grad = True
-
     else:
         model_class = dynamic_import(args.model_module)
         model = model_class(
@@ -990,6 +978,17 @@ def recog(args):
     # read json data
     with open(args.recog_json, "rb") as f:
         js = json.load(f)["utts"]
+
+    # !!!修改decoding的utt个数
+    F_data = {}
+    count = 0
+    for k, v in js.items():
+        # if js[k]['utt2spk'] == 'FC01':
+        if count < 15:
+            F_data[k] = v
+            count += 1
+    js = F_data
+
     new_js = {}
 
     load_inputs_and_targets = LoadInputsAndTargets(
@@ -1014,12 +1013,12 @@ def recog(args):
             beam_size=args.beam_size,
             lm=rnnlm,
             lm_weight=args.lm_weight,
-            search_type=args.search_type,
-            max_sym_exp=args.max_sym_exp,
-            u_max=args.u_max,
-            nstep=args.nstep,
-            prefix_alpha=args.prefix_alpha,
-            score_norm=args.score_norm,
+            # search_type=args.search_type,
+            # max_sym_exp=args.max_sym_exp,
+            # u_max=args.u_max,  # 50
+            # nstep=args.nstep,
+            # prefix_alpha=args.prefix_alpha,
+            # score_norm=args.score_norm,
         )
 
     if args.batchsize == 0:

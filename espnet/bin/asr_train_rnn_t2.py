@@ -520,7 +520,7 @@ def get_parser(parser=None, required=True):
 def main(cmd_args):
     os.chdir("/home/dingchaoyue/speech/dysarthria/espnet/egs/torgo/asr1/")
     os.system("pwd")
-    os.environ["CUDA_VISIBLE_DEVICES"] = "6"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "3"
     """Run the main training function."""
     parser = get_parser()
     args, _ = parser.parse_known_args(cmd_args)
@@ -621,7 +621,7 @@ def main(cmd_args):
 
             train(args)
         elif args.backend == "pytorch":
-            from espnet.asr.pytorch_backend.asr_vggblstmp import train
+            from espnet.asr.pytorch_backend.asr_rnn_t2 import train
 
             train(args)
         else:

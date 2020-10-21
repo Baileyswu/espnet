@@ -310,13 +310,13 @@ def main(args):
                 # Experimental API that supports custom LMs
                 if args.api == "v2":
                     logging.info("api==%s"%args.api)
-                    from espnet.asr.pytorch_backend.recog_rnn import recog_v2
+                    from espnet.asr.pytorch_backend.recog_rnn_t2 import recog_v2
                     # logging.warning("***********reding recog_v2***********")
                     # print("***********reding recog_v2***********")
                     recog_v2(args)
                     
                 else:
-                    from espnet.asr.pytorch_backend.asr import recog
+                    from espnet.asr.pytorch_backend.asr_rnn_t2 import recog
 
                     if args.dtype != "float32":
                         raise NotImplementedError(
@@ -330,7 +330,7 @@ def main(args):
                         f"--num-encs {args.num_encs} > 1 is not supported in --api v2"
                     )
                 else:
-                    from espnet.asr.pytorch_backend.asr import recog
+                    from espnet.asr.pytorch_backend.asr_rnn_t2 import recog
 
                     recog(args)
         else:

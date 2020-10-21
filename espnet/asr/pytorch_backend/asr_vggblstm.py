@@ -978,6 +978,17 @@ def recog(args):
     # read json data
     with open(args.recog_json, "rb") as f:
         js = json.load(f)["utts"]
+
+    # !!!修改decoding的utt个数
+    F_data = {}
+    count = 0
+    for k, v in js.items():
+        # if js[k]['utt2spk'] == 'FC01':
+        if count < 15:
+            F_data[k] = v
+            count += 1
+    js = F_data
+
     new_js = {}
 
     load_inputs_and_targets = LoadInputsAndTargets(

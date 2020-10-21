@@ -11,7 +11,7 @@ backend=pytorch
 stage=-1 # start from -1 if you need to start from data download
 stop_stage=100
 ngpu=2 # number of gpus ("0" uses cpu, otherwise use gpu)
-nj=20  # number of cpu  32!!!
+nj=8   # number of cpu  32!!!
 debugmode=1
 dumpdir=dump # directory to dump full features
 N=0          # number of minibatches to be used (mainly for debugging). "0" uses all minibatches.
@@ -22,9 +22,9 @@ resume=      # Resume the training from snapshot
 do_delta=false
 
 # !!!选择预训练模型
-pretrain_model=pretrained/rnnt
+pretrain_model=pretrained/vggblstm
 
-preprocess_config=conf/specaug.yaml
+preprocess_config=${pretrain_model}/specaug.yaml
 train_config=${pretrain_model}/train.yaml # current default recipe requires 4 gpus.
 # if you do not have 4 gpus, please reconfigure the `batch-bins` and `accum-grad` parameters in config.
 lm_config=conf/lm.yaml
@@ -35,11 +35,11 @@ lm_resume= # specify a snapshot file to resume LM training
 lmtag=     # tag for managing LMs
 
 # decoding parameter
-recog_model=model.loss.best  # set a model to be used for decoding: 'model.acc.best' or 'model.loss.best'
+recog_model=model.acc.best  # set a model to be used for decoding: 'model.acc.best' or 'model.loss.best'
 lang_model=rnnlm.model.best # set a language model to be used for decoding
 
 # model average realted (only for transformer)
-n_average=5               # the number of ASR models to be averaged 要平均的ASR模型数
+n_average=5              # the number of ASR models to be averaged 要平均的ASR模型数
 use_valbest_average=true # !!!if true, the validation `n_average`-best ASR models will be averaged.
 # if false, the last `n_average` ASR models will be averaged.
 lm_n_average=0               # the number of languge models to be averaged
@@ -113,7 +113,7 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     ### Task dependent. You have to design training and dev sets by yourself.
     ### But you can utilize Kaldi recipes in most cases
     echo "stage 1: Feature Generation"
-    fbankdir=fbank
+    fbankdir=fbank_rnn_t
     # Generate the fbank features; by default 80-dimensional fbanks with pitch on each frame
     for x in train_rnn_t test_rnn_t valid_rnn_t; do
         steps/make_fbank_pitch.sh --cmd "$train_cmd" --nj ${nj} --write_utt2num_frames true \
@@ -146,15 +146,15 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
             ${feat_dt_dir}/storage
     fi
     dump.sh --cmd "$train_cmd" --nj ${nj} --do_delta ${do_delta} \
-        data/${train_set}/feats.scp data/${train_set}/cmvn.ark exp/dump_feats/train ${feat_tr_dir}
+        data/${train_set}/feats.scp data/${train_set}/cmvn.ark exp/dump_feats_rnn_t/train ${feat_tr_dir}
     dump.sh --cmd "$train_cmd" --nj ${nj} --do_delta ${do_delta} \
-        data/${train_dev}/feats.scp data/${train_set}/cmvn.ark exp/dump_feats/dev ${feat_dt_dir}
+        data/${train_dev}/feats.scp data/${train_set}/cmvn.ark exp/dump_feats_rnn_t/dev ${feat_dt_dir}
 
     for rtask in ${recog_set}; do
         feat_recog_dir=${dumpdir}/${rtask}/delta${do_delta}
         mkdir -p ${feat_recog_dir}
         dump.sh --cmd "$train_cmd" --nj ${nj} --do_delta ${do_delta} \
-            data/${rtask}/feats.scp data/${train_set}/cmvn.ark exp/dump_feats/recog/${rtask} \
+            data/${rtask}/feats.scp data/${train_set}/cmvn.ark exp/dump_feats_rnn_t/recog/${rtask} \
             ${feat_recog_dir}
     done
 fi
@@ -262,10 +262,12 @@ if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
         --minibatches ${N} \
         --verbose ${verbose} \
         --resume ${resume} \
+        --preprocess-conf ${preprocess_config} \
         --train-json ${feat_tr_dir}/data_${bpemode}${nbpe}.json \
         --valid-json ${feat_dt_dir}/data_${bpemode}${nbpe}.json \
         --enc-init "${pretrain_model}/model.acc.best" \
         --dec-init "${pretrain_model}/model.acc.best"
+
 fi
 
 if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
@@ -343,8 +345,10 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
                 --recog-json ${feat_recog_dir}/split${nj}utt/data_${bpemode}${nbpe}.JOB.json \
                 --result-label ${expdir}/${decode_dir}/data.JOB.json \
                 --model ${expdir}/results/${recog_model} \
-                # --ndo ${ndo} \
-                # --rnnlm ${lmexpdir}/${lang_model} \
+                --api v2 \
+                --nbpe ${nbpe}
+            # --ndo ${ndo} \
+            # --rnnlm ${lmexpdir}/${lang_model} \
 
             score_sclite.sh --bpe ${nbpe} --bpemodel ${bpemodel}.model --wer true \
                 ${expdir}/${decode_dir} ${dict}

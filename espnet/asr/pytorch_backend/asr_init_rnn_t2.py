@@ -243,8 +243,7 @@ def load_trained_modules(idim, odim, args, interface=ASRInterface):
     enc_modules = args.enc_init_mods
     dec_modules = args.dec_init_mods
 
-    model_class = dynamic_import(args.model_module)  # 定义声学Transformer模型并随机初始化
-    # define new model
+    model_class = dynamic_import(args.model_module)
     main_model = model_class(idim, odim, args)
     assert isinstance(main_model, interface)
 
@@ -253,22 +252,13 @@ def load_trained_modules(idim, odim, args, interface=ASRInterface):
     logging.warning("model(s) found for pre-initialization")
     for model_path, modules in [
         (enc_model_path, enc_modules),
-        # (dec_model_path, dec_modules),  # !!!注释，使用第一个enc_model_path加载整个模型权重
+        (dec_model_path, dec_modules),
     ]:
         if model_path is not None:
             if os.path.isfile(model_path):
-                model_state_dict, is_lm = get_trained_model_state_dict(model_path)  # 读取预训练模型的状态词典
+                model_state_dict, is_lm = get_trained_model_state_dict(model_path)
 
-                # modules = filter_modules(model_state_dict, modules)  # 过滤不匹配的模块
-                modules = filter_modules(model_state_dict, main_state_dict)
-                # 删除包含维度为5002的字典值
-                modules.remove('dec.output.weight')
-                modules.remove('dec.output.bias')
-                modules.remove('dec.embed.weight')
-                modules.remove('ctc.ctc_lo.weight')
-                modules.remove('ctc.ctc_lo.bias')
-
-
+                modules = filter_modules(model_state_dict, modules)
                 if is_lm:
                     partial_state_dict, modules = get_partial_lm_state_dict(
                         model_state_dict, modules

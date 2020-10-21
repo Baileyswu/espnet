@@ -165,12 +165,12 @@ def recog_v2(args):
 
 
 
-    # # !!!修改decoding的utt个数
+    # !!!修改decoding的utt个数
     # F_data = {}
     # count = 0
     # for k, v in js.items():
     #     # if js[k]['utt2spk'] == 'FC01':
-    #     if count < 10:
+    #     if count < 15:
     #         F_data[k] = v
     #         count += 1
     # js = F_data

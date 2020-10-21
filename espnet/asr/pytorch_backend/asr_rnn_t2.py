@@ -33,9 +33,9 @@ from espnet.asr.asr_utils import snapshot_object
 from espnet.asr.asr_utils import torch_load
 from espnet.asr.asr_utils import torch_resume
 from espnet.asr.asr_utils import torch_snapshot
-from espnet.asr.pytorch_backend.asr_init_rnn_t import freeze_modules
-from espnet.asr.pytorch_backend.asr_init_rnn_t import load_trained_model
-from espnet.asr.pytorch_backend.asr_init_rnn_t import load_trained_modules
+from espnet.asr.pytorch_backend.asr_init_rnn_t2 import freeze_modules
+from espnet.asr.pytorch_backend.asr_init_rnn_t2 import load_trained_model
+from espnet.asr.pytorch_backend.asr_init_rnn_t2 import load_trained_modules
 import espnet.lm.pytorch_backend.extlm as extlm_pytorch
 from espnet.nets.asr_interface import ASRInterface
 from espnet.nets.beam_search_transducer import BeamSearchTransducer

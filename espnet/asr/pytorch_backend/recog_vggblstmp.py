@@ -129,14 +129,14 @@ def recog_v2(args):
         js = json.load(f)["utts"]
 
     # !!!修改decoding的utt个数
-    F_data = {}
-    count = 0
-    for k, v in js.items():
-        # if js[k]['utt2spk'] == 'FC01':
-        if count < 10:
-            F_data[k] = v
-            count += 1
-    js = F_data
+    # F_data = {}
+    # count = 0
+    # for k, v in js.items():
+    #     # if js[k]['utt2spk'] == 'FC01':
+    #     if count < 15:
+    #         F_data[k] = v
+    #         count += 1
+    # js = F_data
 
     new_js = {}
     with torch.no_grad():

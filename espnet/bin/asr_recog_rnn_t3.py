@@ -241,7 +241,7 @@ def get_parser():
 def main(args):
     os.chdir("/home/dingchaoyue/speech/dysarthria/espnet/egs/torgo/asr1/")
     os.system("pwd")
-    # os.environ["CUDA_VISIBLE_DEVICES"] = "3"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "4"
     # logging.info("***********running asr_recog.py***********")
     """Run the main decoding function."""
     parser = get_parser()
@@ -310,13 +310,13 @@ def main(args):
                 # Experimental API that supports custom LMs
                 if args.api == "v2":
                     logging.info("api==%s"%args.api)
-                    from espnet.asr.pytorch_backend.recog_vggblstm import recog_v2
+                    from espnet.asr.pytorch_backend.recog_rnn_t3 import recog_v2
                     # logging.warning("***********reding recog_v2***********")
                     # print("***********reding recog_v2***********")
                     recog_v2(args)
                     
                 else:
-                    from espnet.asr.pytorch_backend.asr_vggblstm import recog
+                    from espnet.asr.pytorch_backend.asr_rnn_t3 import recog
 
                     if args.dtype != "float32":
                         raise NotImplementedError(
@@ -330,7 +330,7 @@ def main(args):
                         f"--num-encs {args.num_encs} > 1 is not supported in --api v2"
                     )
                 else:
-                    from espnet.asr.pytorch_backend.asr_vggblstm import recog
+                    from espnet.asr.pytorch_backend.asr_rnn_t3 import recog
 
                     recog(args)
         else:

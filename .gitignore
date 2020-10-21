@@ -58,6 +58,8 @@ egs*/*/*/stft
 egs*/*/*/tensorboard
 egs*/*/*/wav*
 egs/torgo/all_speaks_feats
+egs/torgo/all_important_results
+egs/torgo/other_models_results
 
 # tools related
 tools/bin

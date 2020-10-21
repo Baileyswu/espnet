@@ -310,7 +310,7 @@ def main(args):
                 # Experimental API that supports custom LMs
                 if args.api == "v2":
                     logging.info("api==%s"%args.api)
-                    from espnet.asr.pytorch_backend.recog_rnn_t import recog_v2
+                    from espnet.asr.pytorch_backend.recog_blstm import recog_v2
                     # logging.warning("***********reding recog_v2***********")
                     # print("***********reding recog_v2***********")
                     recog_v2(args)
