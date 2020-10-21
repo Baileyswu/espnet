@@ -4,7 +4,7 @@ import json
 import logging
 
 import torch
-
+import torch.nn as nn
 from espnet.asr.asr_utils import add_results_to_json
 from espnet.asr.asr_utils import get_model_conf
 from espnet.asr.asr_utils import torch_load
@@ -17,6 +17,9 @@ from espnet.nets.scorer_interface import BatchScorerInterface
 from espnet.nets.scorers.length_bonus import LengthBonus
 from espnet.utils.deterministic_utils import set_deterministic_pytorch
 from espnet.utils.io_utils import LoadInputsAndTargets
+import importlib
+import sys
+importlib.reload(sys)
 
 
 def recog_v2(args):
@@ -40,9 +43,35 @@ def recog_v2(args):
         raise NotImplementedError("word LM is not implemented")
 
     set_deterministic_pytorch(args)
+    # 确保pytorch根据程序参数生成确定性结果
     model, train_args = load_trained_model(args.model)
+    # 导入声学模型和声学模型的args
     assert isinstance(model, ASRInterface)
     model.eval()
+    # 开启模型评估模式
+
+    '''
+    修改decoder参数
+    句子起始符"<sos>"，未知token"<unk>"，句子终止符"<eos>"
+    '''
+    # model.odim = args.ndo + 2  # dim
+    # model.sos = args.ndo + 1  # index
+    # model.eos = args.ndo + 1
+    # 修改decoder最后一层输出维度
+    # model.dec.output = nn.Linear(512, args.ndo + 2)
+
+    # # 读取torgo_dict.txt为list对象，替换train_args下的char_list中的值。
+    # torgo_list = []
+    # with open('/home/dingchaoyue/speech/dysarthria/espnet/egs/torgo/asr1/data/lang_char/trainset_unigram' + str(args.nbpe) + '_units.txt', mode='r', encoding='UTF-8') as f:
+    #     for line in f.readlines():
+    #         data = line.split()sss
+    #         torgo_list.append(data[0])
+    # # train_args.char_list = train_args.char_list[:args.ndo]
+    # # train_args.char_list.append('eos')
+    # torgo_list.append('<eos>')
+    # torgo_list.insert(0, '<blank>')
+    # train_args.char_list = torgo_list
+
 
     load_inputs_and_targets = LoadInputsAndTargets(
         mode="asr",
@@ -60,6 +89,7 @@ def recog_v2(args):
         lm_model_module = getattr(lm_args, "model_module", "default")
         lm_class = dynamic_import_lm(lm_model_module, lm_args.backend)
         lm = lm_class(len(train_args.char_list), lm_args)
+        # 用预训练模型初始化的lm模型
         torch_load(args.rnnlm, lm)
         lm.eval()
     else:
@@ -77,6 +107,8 @@ def recog_v2(args):
         ngram = None
 
     scorers = model.scorers()
+    # scorers==decoder+ctc
+    # 其中的output_layer层是Linear(in_features=512, out_features=5002, bias=True)
     scorers["lm"] = lm
     scorers["ngram"] = ngram
     scorers["length_bonus"] = LengthBonus(len(train_args.char_list))
@@ -124,9 +156,27 @@ def recog_v2(args):
     model.to(device=device, dtype=dtype).eval()
     beam_search.to(device=device, dtype=dtype).eval()
 
+
+
+
     # read json data
     with open(args.recog_json, "rb") as f:
         js = json.load(f)["utts"]
+
+
+
+    # # !!!修改decoding的utt个数
+    # F_data = {}
+    # count = 0
+    # for k, v in js.items():
+    #     # if js[k]['utt2spk'] == 'FC01':
+    #     if count < 10:
+    #         F_data[k] = v
+    #         count += 1
+    # js = F_data
+
+
+
     new_js = {}
     with torch.no_grad():
         for idx, name in enumerate(js.keys(), 1):
@@ -134,7 +184,8 @@ def recog_v2(args):
             batch = [(name, js[name])]
             feat = load_inputs_and_targets(batch)[0][0]
             enc = model.encode(torch.as_tensor(feat).to(device=device, dtype=dtype))
-            nbest_hyps = beam_search(
+            # decoder输出，dim: 21, 28, 40, 43->512
+            nbest_hyps = beam_search(  # decoder输出，512->5002
                 x=enc, maxlenratio=args.maxlenratio, minlenratio=args.minlenratio
             )
             nbest_hyps = [

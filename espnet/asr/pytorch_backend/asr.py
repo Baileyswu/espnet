@@ -12,6 +12,9 @@ import logging
 import math
 import os
 import sys
+import numpy as np
+import re
+
 
 from chainer import reporter as reporter_module
 from chainer import training
@@ -20,6 +23,7 @@ from chainer.training.updater import StandardUpdater
 import numpy as np
 from tensorboardX import SummaryWriter
 import torch
+import torch.nn as nn
 from torch.nn.parallel import data_parallel
 
 from espnet.asr.asr_utils import adadelta_eps_decay
@@ -50,8 +54,16 @@ from espnet.utils.dataset import ChainerDataLoader
 from espnet.utils.dataset import TransformDataset
 from espnet.utils.deterministic_utils import set_deterministic_pytorch
 from espnet.utils.dynamic_import import dynamic_import
-from espnet.utils.io_utils import LoadInputsAndTargets
-from espnet.utils.training.batchfy import make_batchset
+
+
+# from espnet.utils.io_utils import LoadInputsAndTargets
+from espnet.utils.io_utils_recons import LoadInputsAndTargets
+
+
+# from espnet.utils.training.batchfy import make_batchset
+from espnet.utils.training.batchfy_recons import make_batchset
+
+
 from espnet.utils.training.evaluator import BaseEvaluator
 from espnet.utils.training.iterators import ShufflingEnabler
 from espnet.utils.training.tensorboard_logger import TensorboardLogger
@@ -199,10 +211,15 @@ class CustomUpdater(StandardUpdater):
         # see details in https://github.com/espnet/espnet/pull/1388
 
         # Compute the loss at this time step and accumulate it
+        #!!! 数据从这里传入模型,开始计算损失
         if self.ngpu == 0:
             loss = self.model(*x).mean() / self.accum_grad
+            # * 代表，接收任意多变量，并转化成元组。
         else:
             # apex does not support torch.nn.DataParallel
+            # loss = (
+            #     data_parallel(self.model, x, range(self.ngpu)).mean() / self.accum_grad
+            # )
             loss = (
                 data_parallel(self.model, x, range(self.ngpu)).mean() / self.accum_grad
             )
@@ -279,14 +296,19 @@ class CustomConverter(object):
 
         # perform subsampling
         if self.subsampling_factor > 1:
-            xs = [x[:: self.subsampling_factor, :] for x in xs]
+            # xs = [x[:: self.subsampling_factor, :] for x in xs]
+            xs = [(x1[:: self.subsampling_factor, :], x2[:: self.subsampling_factor, :])
+                  for x1, x2 in xs]
 
         # get batch of lengths of input sequences
-        ilens = np.array([x.shape[0] for x in xs])
+        dys_ilens = np.array([x[0].shape[0] for x in xs])
+        # hc_ilens = np.array([x[1].shape[0] for x in xs])
 
         # perform padding and convert to tensor
         # currently only support real number
-        if xs[0].dtype.kind == "c":
+        if xs[0][0].dtype.kind == "c" and xs[0][1].dtype.kind == "c":  # 不执行
+            # Exception has occurred: AttributeError 'torch.dtype' object has no attribute 'kind'
+            # default is false
             xs_pad_real = pad_list(
                 [torch.from_numpy(x.real).float() for x in xs], 0
             ).to(device, dtype=self.dtype)
@@ -298,12 +320,18 @@ class CustomConverter(object):
             # Don't create ComplexTensor and give it E2E here
             # because torch.nn.DataParellel can't handle it.
             xs_pad = {"real": xs_pad_real, "imag": xs_pad_imag}
+
         else:
-            xs_pad = pad_list([torch.from_numpy(x).float() for x in xs], 0).to(
+            xs_pad_dys = pad_list([torch.from_numpy(x).float() for x, _ in xs], 0).to(
+                device, dtype=self.dtype
+            )
+            xs_pad_hc = pad_list([torch.from_numpy(x).float() for _, x in xs], 0).to(
                 device, dtype=self.dtype
             )
 
-        ilens = torch.from_numpy(ilens).to(device)
+        ilens_dys = torch.from_numpy(dys_ilens).to(device)
+        # ilens_hc = torch.from_numpy(hc_ilens).to(device)
+
         # NOTE: this is for multi-output (e.g., speech translation)
         ys_pad = pad_list(
             [
@@ -314,8 +342,33 @@ class CustomConverter(object):
             ],
             self.ignore_id,
         ).to(device)
+        # final output tensors
 
-        return xs_pad, ilens, ys_pad
+        # !!! todo add noise and delete
+        
+        # import torch.distributions as tdf
+        # def noise(x):
+        #     d1 = x.shape[0]
+        #     d2 = x.shape[1]
+        #     d3 = x.shape[2]
+        #     bernouli_dis = tdf.bernoulli.Bernoulli(torch.tensor([0.05]))  # 参数矩阵中1的个数,0.05代表对矩阵中1/20的数据加噪声
+        #     temp1 = bernouli_dis.sample((d1, d2, d3)).squeeze(-1)
+        #     norm_dis = tdf.Normal(torch.Tensor([0.0]), torch.Tensor([0.01]))  # 方差代表这个值附近波动
+        #     temp2 = norm_dis.sample((d1, d2, d3)).squeeze(-1)
+        #     return temp1 * temp2 + x
+
+        # def reconstruction(x):
+        #     d1 = x.shape[0]
+        #     d2 = x.shape[1]
+        #     d3 = x.shape[2]
+        #     bernouli_dis = tdf.bernoulli.Bernoulli(torch.tensor([0.5]))
+        #     temp = bernouli_dis.sample((d1, d2, d3)).squeeze(-1)
+        #     return temp * x
+
+        # xs_pad_dys = noise(xs_pad_dys)  # !!!噪声，对于健康人加高斯噪声
+        # xs_pad_dys = reconstruction(xs_pad_dys)  # 对于健康人随机置零
+
+        return xs_pad_dys, ilens_dys, xs_pad_hc, ys_pad
 
 
 class CustomConverterMulEnc(object):
@@ -436,13 +489,28 @@ def train(args):
         logging.info("Multitask learning mode")
 
     if (args.enc_init is not None or args.dec_init is not None) and args.num_encs == 1:
-        model = load_trained_modules(idim_list[0], odim, args)
+        model = load_trained_modules(idim_list[0], odim, args)  # !!!读取预训练模型
+
+        # # 冻结模型参数，!!!全局微调，部分微调
+        # for param in model.parameters():
+        #     param.requires_grad = False
+
+        # # 解冻参数
+        # for param in model.decoder.output_layer.parameters():
+        #     param.requires_grad = True
+        # for param in model.decoder.embed.parameters():
+        #     param.requires_grad = True
+        # for param in model.ctc.ctc_lo.parameters():
+        #     param.requires_grad = True
+        # for param in model.gru.parameters():
+        #     param.requires_grad = True
+
     else:
-        model_class = dynamic_import(args.model_module)
+        model_class = dynamic_import(args.model_module)  # 定义新模型
         model = model_class(
             idim_list[0] if args.num_encs == 1 else idim_list, odim, args
         )
-    assert isinstance(model, ASRInterface)
+    assert isinstance(model, ASRInterface)  # 声明神经网络
 
     logging.info(
         " Total parameter of the model = "
@@ -567,15 +635,76 @@ def train(args):
         )
 
     # read json data
-    with open(args.train_json, "rb") as f:
+    with open(args.train_json, "rb") as f:  # 读取训练集数据，之后存入trainer中
         train_json = json.load(f)["utts"]
-    with open(args.valid_json, "rb") as f:
+    with open(args.valid_json, "rb") as f:  # 读取验证集数据
         valid_json = json.load(f)["utts"]
+
+    # tocheck
+    train_json_new = dict()
+    # num_count = 0
+    print("Length of training data {0}".format(len(train_json)))
+    for key1 in train_json.keys():
+        if re.match(r"[A-Z]\d(.*?)", key1, re.M | re.I):  # 正则表达式
+            key_word = key1[-10:]
+            candidate = re.findall(r"([A-Z][A-Z]\d\d\S*%s)" %
+                                   key_word, " ".join(list(train_json.keys())))
+            match_keys = np.random.choice(candidate, 1)  # !!!n倍数据增强
+            for key2 in match_keys:
+                train_json_new[key1 + '-' + key2] = {
+                    "input": [{"dys_feat": train_json[key1]['input'][0]["feat"],
+                               "hc_feat":train_json[key2]['input'][0]["feat"],
+                               "dys_shape":train_json[key1]['input'][0]["shape"],
+                               "hc_shape":train_json[key2]['input'][0]["shape"] ,
+                               "name":"input1"}],
+                    "output": train_json[key1]['output'],
+                    "utt2spk": train_json[key1]['utt2spk']}
+        else:
+            train_json_new[key1 + '-' + key1] = {
+                "input": [{"dys_feat": train_json[key1]['input'][0]["feat"],
+                           "hc_feat":train_json[key1]['input'][0]["feat"],
+                           "dys_shape":train_json[key1]['input'][0]["shape"],
+                           "hc_shape":train_json[key1]['input'][0]["shape"] ,
+                           "name":"input1"}],
+                "output": train_json[key1]['output'],
+                "utt2spk": train_json[key1]['utt2spk']}
+
+    print("Length of combing traing data {0}".format(len(train_json_new)))
+
+    # tocheck
+    valid_json_new = dict()
+    print("Length of valid data {0}".format(len(valid_json)))
+    for key1 in valid_json.keys():
+        if re.match(r"[A-Z]\d(.*?)", key1, re.M | re.I):  # 正则表达式
+            key_word = key1[-10:]
+            candidate = re.findall(r"([A-Z][A-Z]\d\d\S*%s)" %
+                                   key_word, " ".join(list(train_json.keys())))
+            match_keys = np.random.choice(candidate, 1)  # !!!n倍数据增强
+            for key2 in match_keys:
+                valid_json_new[key1 + '-' + key2] = {
+                    "input": [{"dys_feat": valid_json[key1]['input'][0]["feat"],
+                               "hc_feat":train_json[key2]['input'][0]["feat"],
+                               "dys_shape":valid_json[key1]['input'][0]["shape"],
+                               "hc_shape":train_json[key2]['input'][0]["shape"] ,
+                               "name":"input1"}],
+                    "output": valid_json[key1]['output'],
+                    "utt2spk": valid_json[key1]['utt2spk']}
+        else:
+            valid_json_new[key1 + '-' + key1] = {
+                "input": [{"dys_feat": valid_json[key1]['input'][0]["feat"],
+                           "hc_feat":valid_json[key1]['input'][0]["feat"],
+                           "dys_shape":valid_json[key1]['input'][0]["shape"],
+                           "hc_shape":valid_json[key1]['input'][0]["shape"] ,
+                           "name":"input1"}],
+                "output": valid_json[key1]['output'],
+                "utt2spk": valid_json[key1]['utt2spk']}
+
+    print("Length of combing valid data {0}".format(len(valid_json_new)))
 
     use_sortagrad = args.sortagrad == -1 or args.sortagrad > 0
     # make minibatch list (variable length)
     train = make_batchset(
-        train_json,
+        train_json_new,
         args.batch_size,
         args.maxlen_in,
         args.maxlen_out,
@@ -591,7 +720,7 @@ def train(args):
         oaxis=0,
     )
     valid = make_batchset(
-        valid_json,
+        valid_json_new,
         args.batch_size,
         args.maxlen_in,
         args.maxlen_out,
@@ -619,7 +748,7 @@ def train(args):
         preprocess_args={"train": False},  # Switch the mode of preprocessing
     )
     # hack to make batchsize argument as 1
-    # actual bathsize is included in a list
+    # actual batchsize is included in a list
     # default collate function converts numpy array to pytorch tensor
     # we used an empty collate function instead which returns list
     train_iter = ChainerDataLoader(
@@ -657,7 +786,8 @@ def train(args):
             trigger=(args.sortagrad if args.sortagrad != -1 else args.epochs, "epoch"),
         )
 
-    # Resume from a snapshot
+    # Resume from a snapshot，选择从一个snapshot中恢复训练进度!!!
+    # args.resume='exp/trainset_pytorch_train_specaug/results/snapshot.ep.3'
     if args.resume:
         logging.info("resumed from %s" % args.resume)
         torch_resume(args.resume, trainer)
@@ -706,7 +836,8 @@ def train(args):
             transform=load_cv,
             device=device,
         )
-        trainer.extend(att_reporter, trigger=(1, "epoch"))
+        # remove attention weight plot module
+        # trainer.extend(att_reporter, trigger=(1, "epoch"))
     else:
         att_reporter = None
 
@@ -734,7 +865,8 @@ def train(args):
             ikey="output",
             iaxis=1,
         )
-        trainer.extend(ctc_reporter, trigger=(1, "epoch"))
+        # remvoe ctc prob each attention weight
+        # trainer.extend(ctc_reporter, trigger=(1, "epoch"))
     else:
         ctc_reporter = None
 
@@ -775,7 +907,7 @@ def train(args):
         )
     )
 
-    # Save best models
+    # Save best models 存储最佳模型
     trainer.extend(
         snapshot_object(model, "model.loss.best"),
         trigger=training.triggers.MinValueTrigger("validation/main/loss"),
@@ -795,7 +927,7 @@ def train(args):
     else:
         trainer.extend(torch_snapshot(), trigger=(1, "epoch"))
 
-    # epsilon decay in the optimizer
+    # epsilon decay in the optimizer 优化器中的Epsilon衰变
     if args.opt == "adadelta":
         if args.criterion == "acc" and mtl_mode != "ctc":
             trainer.extend(
@@ -844,7 +976,7 @@ def train(args):
                 ),
             )
 
-    # Write a log of evaluation statistics for each epoch
+    # Write a log of evaluation statistics for each epoch!!!没有执行
     trainer.extend(
         extensions.LogReport(trigger=(args.report_interval_iters, "iteration"))
     )
@@ -886,15 +1018,16 @@ def train(args):
     trainer.extend(extensions.ProgressBar(update_interval=args.report_interval_iters))
     set_early_stop(trainer, args)
 
-    if args.tensorboard_dir is not None and args.tensorboard_dir != "":
-        trainer.extend(
-            TensorboardLogger(
-                SummaryWriter(args.tensorboard_dir),
-                att_reporter=att_reporter,
-                ctc_reporter=ctc_reporter,
-            ),
-            trigger=(args.report_interval_iters, "iteration"),
-        )
+    # temporary remove tensorboard
+    # if args.tensorboard_dir is not None and args.tensorboard_dir != "":
+    #     trainer.extend(
+    #         TensorboardLogger(
+    #             SummaryWriter(args.tensorboard_dir),
+    #             att_reporter=att_reporter,
+    #             ctc_reporter=ctc_reporter,
+    #         ),
+    #         trigger=(args.report_interval_iters, "iteration"),
+    #     )
     # Run the training
     trainer.run()
     check_early_stop(trainer, args.epochs)
@@ -925,6 +1058,7 @@ def recog(args):
         if getattr(rnnlm_args, "model_module", "default") != "default":
             raise ValueError(
                 "use '--api v2' option to decode with non-default language model"
+                # “使用'--api v2'选项以非默认语言模型进行解码”
             )
         rnnlm = lm_pytorch.ClassifierWithState(
             lm_pytorch.RNNLM(

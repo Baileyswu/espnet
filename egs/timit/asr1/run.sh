@@ -27,7 +27,8 @@ decode_config=conf/decode.yaml
 recog_model=model.acc.best # set a model to be used for decoding: 'model.acc.best' or 'model.loss.best'
 
 # data
-timit=/home/shree/TIMIT
+#timit=/home/shree/TIMIT
+timit=/home/data/TIMIT
 trans_type=char
 
 # exp tag
@@ -123,7 +124,7 @@ mkdir -p ${expdir}
 if [ ${stage} -le 3 ] && [ ${stop_stage} -ge 3 ]; then
     echo "stage 3: Network Training"
     ${cuda_cmd} --gpu ${ngpu} ${expdir}/train.log \
-    asr_train.py \
+    asr_train.py \  # modify model
     --config ${train_config} \
     --ngpu ${ngpu} \
     --backend ${backend} \

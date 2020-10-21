@@ -13,7 +13,6 @@ import sys
 
 from espnet.utils.cli_utils import get_commandline_args
 
-
 def get_parser():
     parser = argparse.ArgumentParser(
         description="convert a json to a transcription file with a token dictionary",
@@ -63,6 +62,7 @@ def convert(jsonf, dic, refs, hyps, num_spkrs=1):
             if num_spkrs == 1:
                 seq = [
                     char_list[int(i)]
+                    # char_list = [entry.split(" ")[0] for entry in dictionary]
                     for i in j["utts"][x]["output"][0]["rec_tokenid"].split()
                 ]
             else:

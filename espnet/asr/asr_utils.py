@@ -639,6 +639,7 @@ def add_gradient_noise(model, iteration, duration=100, eta=1.0, scale_factor=0.5
 # * -------------------- general -------------------- *
 def get_model_conf(model_path, conf_path=None):
     """Get model config information by reading a model config file (model.json).
+    通过读取模型配置文件(model.json)获取模型配置信息。
 
     Args:
         model_path (str): Model path.
@@ -646,6 +647,7 @@ def get_model_conf(model_path, conf_path=None):
 
     Returns:
         list[int, int, dict[str, Any]]: Config information loaded from json file.
+        从json文件加载的配置信息。
 
     """
     if conf_path is None:
@@ -654,14 +656,17 @@ def get_model_conf(model_path, conf_path=None):
         model_conf = conf_path
     with open(model_conf, "rb") as f:
         logging.info("reading a config file from " + model_conf)
+        # logging.info是输出日志的信息
         confs = json.load(f)
     if isinstance(confs, dict):
+        # isinstance() 函数来判断一个对象是否是已知类型，此处confs不是dict类型
         # for lm
         args = confs
         return argparse.Namespace(**args)
     else:
         # for asr, tts, mt
         idim, odim, args = confs
+        # model.json中的三个变量分别赋值给：输入维度，输出维度，参数集
         return idim, odim, argparse.Namespace(**args)
 
 
@@ -719,7 +724,7 @@ def snapshot_object(target, filename):
     return snapshot_object
 
 
-def torch_load(path, model):
+def torch_load(path, model):  # !!!读取状态词典
     """Load torch model states.
 
     Args:
@@ -735,6 +740,7 @@ def torch_load(path, model):
         model_state_dict = torch.load(path, map_location=lambda storage, loc: storage)
 
     if hasattr(model, "module"):
+    # hasattr() 函数用于判断对象是否包含对应的属性，hasattr(object, name)。
         model.module.load_state_dict(model_state_dict)
     else:
         model.load_state_dict(model_state_dict)

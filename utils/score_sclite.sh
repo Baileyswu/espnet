@@ -21,13 +21,15 @@ if [ $# != 2 ]; then
     exit 1;
 fi
 
-dir=$1
-dic=$2
+dir=$1  # decode_dir
+dic=$2  # dict_file
 
 concatjson.py ${dir}/data.*.json > ${dir}/data.json
+# concatenate data.json
 
 if [ $num_spkrs -eq 1 ]; then
   json2trn.py ${dir}/data.json ${dic} --num-spkrs ${num_spkrs} --refs ${dir}/ref.trn --hyps ${dir}/hyp.trn
+  # decode_dir/data.json dict_file --num-spkrs 1 --refs decode_dir/ref.trn --hyps decode_dir/hyp.trn
 
   if ${remove_blank}; then
       sed -i.bak2 -r 's/<blank> //g' ${dir}/hyp.trn
@@ -44,6 +46,7 @@ if [ $num_spkrs -eq 1 ]; then
   fi
 
   sclite -r ${dir}/ref.trn trn -h ${dir}/hyp.trn trn -i rm -o all stdout > ${dir}/result.txt
+  # 重要
 
   echo "write a CER (or TER) result in ${dir}/result.txt"
   grep -e Avg -e SPKR -m 2 ${dir}/result.txt
@@ -62,6 +65,7 @@ if [ $num_spkrs -eq 1 ]; then
       grep -e Avg -e SPKR -m 2 ${dir}/result.wrd.txt
   fi
 elif [ ${num_spkrs} -lt 4 ]; then
+# elif [ ${num_spkrs} -ge 4 ]; then
   ref_trns=""
   hyp_trns=""
   for i in $(seq ${num_spkrs}); do

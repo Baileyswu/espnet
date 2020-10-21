@@ -112,12 +112,14 @@ class BeamSearch(torch.nn.Module):
 
     def init_hyp(self, x: torch.Tensor) -> List[Hypothesis]:
         """Get an initial hypothesis data.
+        获取初始假设数据
 
         Args:
             x (torch.Tensor): The encoder output feature
 
         Returns:
             Hypothesis: The initial hypothesis.
+            假设：最初的假设。
 
         """
         init_states = dict()
@@ -153,6 +155,7 @@ class BeamSearch(torch.nn.Module):
         self, hyp: Hypothesis, x: torch.Tensor
     ) -> Tuple[Dict[str, torch.Tensor], Dict[str, Any]]:
         """Score new hypothesis by `self.full_scorers`.
+        “通过`self.full_scorers对新假设进行评分
 
         Args:
             hyp (Hypothesis): Hypothesis with prefix tokens to score
@@ -296,9 +299,10 @@ class BeamSearch(torch.nn.Module):
         for hyp in running_hyps:
             # scoring
             weighted_scores = torch.zeros(self.n_vocab, dtype=x.dtype, device=x.device)
-            scores, states = self.score_full(hyp, x)
+            scores, states = self.score_full(hyp, x)  # decoder在里面
             for k in self.full_scorers:
                 weighted_scores += self.weights[k] * scores[k]
+                # 加权后的scores，5002个数
             # partial scoring
             if self.do_pre_beam:
                 pre_beam_scores = (
@@ -360,11 +364,12 @@ class BeamSearch(torch.nn.Module):
         logging.info("min output length: " + str(minlen))
 
         # main loop of prefix search
+        # 前缀搜索主循环
         running_hyps = self.init_hyp(x)
         ended_hyps = []
         for i in range(maxlen):
             logging.debug("position " + str(i))
-            best = self.search(running_hyps, x)
+            best = self.search(running_hyps, x)  # decoder在里面
             # post process of one iteration
             running_hyps = self.post_process(i, maxlen, maxlenratio, best, ended_hyps)
             # end detection

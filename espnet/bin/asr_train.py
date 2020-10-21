@@ -100,13 +100,13 @@ def get_parser(parser=None, required=True):
     )
     parser.add_argument(
         "--report-interval-iters",
-        default=100,
+        default=5,  # 100个iterations刷新一次进度，计算一次损失
         type=int,
         help="Report interval iterations",
     )
     parser.add_argument(
         "--save-interval-iters",
-        default=0,
+        default=0,  # !!!snapshot要小于一个epoch的iter次数
         type=int,
         help="Save snapshot interval iterations",
     )
@@ -294,7 +294,7 @@ def get_parser(parser=None, required=True):
     )
     parser.add_argument(
         "--criterion",
-        default="acc",
+        default="loss",  # default: acc
         type=str,
         choices=["loss", "loss_eps_decay_only", "acc"],
         help="Criterion to perform epsilon decay",
@@ -305,9 +305,9 @@ def get_parser(parser=None, required=True):
     parser.add_argument(
         "--epochs", "-e", default=30, type=int, help="Maximum number of epochs"
     )
-    parser.add_argument(
+    parser.add_argument(  # !!! early_stop_criterion
         "--early-stop-criterion",
-        default="validation/main/acc",
+        default="validation/main/acc",  # validation/main/acc
         type=str,
         nargs="?",
         help="Value to monitor to trigger an early stopping of the training",
@@ -360,7 +360,8 @@ def get_parser(parser=None, required=True):
     # finetuning related
     parser.add_argument(
         "--enc-init",
-        default=None,
+        # default=None,
+        default="pretrain",
         type=str,
         help="Pre-trained ASR model to initialize encoder.",
     )
@@ -372,7 +373,8 @@ def get_parser(parser=None, required=True):
     )
     parser.add_argument(
         "--dec-init",
-        default=None,
+        # default=None,
+        default="pretrain",
         type=str,
         help="Pre-trained ASR, MT or LM model to initialize decoder.",
     )
@@ -407,7 +409,7 @@ def get_parser(parser=None, required=True):
         "--wtype",
         default="blstmp",
         type=str,
-        choices=[
+        choces=[
             "lstm",
             "blstm",
             "lstmp",
@@ -514,12 +516,16 @@ def get_parser(parser=None, required=True):
     )
     parser.add_argument("--fbank-fmin", type=float, default=0.0, help="")
     parser.add_argument("--fbank-fmax", type=float, default=None, help="")
+    parser.add_argument("--pretrain", type=str, default=None, help="pretrained model")
     return parser
 
 
 def main(cmd_args):
+    os.chdir("/home/dingchaoyue/speech/dysarthria/espnet/egs/torgo/asr1/")
+    os.system("pwd")
+    os.environ["CUDA_VISIBLE_DEVICES"] = "6"
     """Run the main training function."""
-    parser = get_parser()
+    parser = get_parser() 
     args, _ = parser.parse_known_args(cmd_args)
     if args.backend == "chainer" and args.train_dtype != "float32":
         raise NotImplementedError(
@@ -620,7 +626,7 @@ def main(cmd_args):
         elif args.backend == "pytorch":
             from espnet.asr.pytorch_backend.asr import train
 
-            train(args)
+            train(args)  # running this
         else:
             raise ValueError("Only chainer and pytorch are supported.")
     else:

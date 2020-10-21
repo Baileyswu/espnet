@@ -41,7 +41,10 @@ from espnet.nets.pytorch_backend.transformer.label_smoothing_loss import (
 )
 from espnet.nets.pytorch_backend.transformer.mask import subsequent_mask
 from espnet.nets.pytorch_backend.transformer.mask import target_mask
+
 from espnet.nets.pytorch_backend.transformer.plot import PlotAttentionReport
+
+
 from espnet.nets.scorers.ctc import CTCPrefixScorer
 from espnet.utils.fill_missing_args import fill_missing_args
 
@@ -190,6 +193,7 @@ class E2E(ASRInterface, torch.nn.Module):
         hs_pad, hs_mask = self.encoder(xs_pad, src_mask)
         self.hs_pad = hs_pad
 
+        
         # 2. forward decoder
         if self.decoder is not None:
             if self.decoder_mode == "maskctc":

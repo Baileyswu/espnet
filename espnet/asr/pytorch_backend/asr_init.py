@@ -32,7 +32,8 @@ def freeze_modules(model, modules):
         if any(mod.startswith(m) for m in modules):
             logging.info(f"freezing {mod}, it will not be updated.")
             param.requires_grad = False
-
+    # print(list(filter(lambda x: True,[1,2,3,4,5,6,7,8,9,10])))
+    # Return: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
     model_params = filter(lambda x: x.requires_grad, model.parameters())
 
     return model, model_params
@@ -124,6 +125,7 @@ def get_partial_lm_state_dict(model_state_dict, modules):
 
 def filter_modules(model_state_dict, modules):
     """Filter non-matched modules in module_state_dict.
+    “过滤MODULE_STATE_DICT中不匹配的模块。
 
     Args:
         model_state_dict (OrderedDict): trained model state_dict
@@ -131,6 +133,7 @@ def filter_modules(model_state_dict, modules):
 
     Return:
         new_mods (list): the update module list
+        New_mods(List)：更新模块列表
 
     """
     new_mods = []
@@ -157,11 +160,14 @@ def filter_modules(model_state_dict, modules):
 
 def load_trained_model(model_path):
     """Load the trained model for recognition.
+    加载训练好的模型以进行识别。
 
     Args:
         model_path (str): Path to model.***.best
+        'exp/trainset_pytorch_train_specaug/results/model.acc.best'
 
     """
+    # 输入维度，输出维度，声学模型参数集!!!
     idim, odim, train_args = get_model_conf(
         model_path, os.path.join(os.path.dirname(model_path), "model.json")
     )
@@ -247,7 +253,8 @@ def load_trained_modules(idim, odim, args, interface=ASRInterface):
     enc_modules = args.enc_init_mods
     dec_modules = args.dec_init_mods
 
-    model_class = dynamic_import(args.model_module)
+    model_class = dynamic_import(args.model_module)  # 定义声学Transformer模型并随机初始化
+    # define new model
     main_model = model_class(idim, odim, args)
     assert isinstance(main_model, interface)
 
@@ -256,13 +263,22 @@ def load_trained_modules(idim, odim, args, interface=ASRInterface):
     logging.warning("model(s) found for pre-initialization")
     for model_path, modules in [
         (enc_model_path, enc_modules),
-        (dec_model_path, dec_modules),
+        # (dec_model_path, dec_modules),  # !!!注释，使用第一个enc_model_path加载整个模型权重
     ]:
         if model_path is not None:
             if os.path.isfile(model_path):
-                model_state_dict, is_lm = get_trained_model_state_dict(model_path)
+                model_state_dict, is_lm = get_trained_model_state_dict(model_path)  # 读取预训练模型的状态词典
 
-                modules = filter_modules(model_state_dict, modules)
+                # modules = filter_modules(model_state_dict, modules)  # 过滤不匹配的模块
+                modules = filter_modules(model_state_dict, main_state_dict)
+                # 删除包含维度为5002的字典值
+                modules.remove('decoder.output_layer.weight')
+                modules.remove('decoder.output_layer.bias')
+                modules.remove('decoder.embed.0.weight')
+                modules.remove('ctc.ctc_lo.weight')
+                modules.remove('ctc.ctc_lo.bias')
+
+
                 if is_lm:
                     partial_state_dict, modules = get_partial_lm_state_dict(
                         model_state_dict, modules

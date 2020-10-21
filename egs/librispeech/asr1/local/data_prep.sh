@@ -4,38 +4,53 @@
 #           2014  Johns Hopkins University (author: Daniel Povey)
 # Apache 2.0
 
-if [ "$#" -ne 2 ]; then
+# local/data_prep.sh ${datadir}/LibriSpeech/${part} data/${part//-/_}
+
+if [ "$#" -ne 2 ]; then  # -ne: not equal to
   echo "Usage: $0 <src-dir> <dst-dir>"
   echo "e.g.: $0 /export/a15/vpanayotov/data/LibriSpeech/dev-clean data/dev-clean"
   exit 1
 fi
 
-src=$1
-dst=$2
+src=$1  # source data dir
+dst=$2  # output dir
 
-# all utterances are FLAC compressed
+# all utterances are FLAC compressed 所有语音都是FLAC压缩的
 if ! which flac >&/dev/null; then
+# >&/dev/null表示把标准输出和错误输出重定向到/dev/null，程序不在屏幕上输出
+# !表示否定的意思，若执行which flac命令没有得到结果，则执行if下命令
    echo "Please install 'flac' on ALL worker nodes!"
    exit 1
 fi
 
-spk_file=$src/../SPEAKERS.TXT
+spk_file=$src/../SPEAKERS.TXT  # speaker-subset information
 
 mkdir -p $dst || exit 1
+# A || B（逻辑或）：A执行失败，B才会执行；A执行成功，B不执行。
+# A && B（逻辑与）：A执行成功，B才会执行；A执行失败，B不执行。
 
 [ ! -d $src ] && echo "$0: no such directory $src" && exit 1
 [ ! -f $spk_file ] && echo "$0: expected file $spk_file to exist" && exit 1
-
+# []为条件表达式，简易版的if
+# -e表示如果filename存在，则为真。
+# -f表示如果filename为常规文件，则为真。
 
 wav_scp=$dst/wav.scp; [[ -f "$wav_scp" ]] && rm $wav_scp
 trans=$dst/text; [[ -f "$trans" ]] && rm $trans
 utt2spk=$dst/utt2spk; [[ -f "$utt2spk" ]] && rm $utt2spk
 spk2gender=$dst/spk2gender; [[ -f $spk2gender ]] && rm $spk2gender
+# 4个最重要的文件
+# [[ -f "$wav_scp" ]] && rm $wav_scp表示-f "data/train_clean_100/wav.scp"是否存在，如果存在则删除。
 
 for reader_dir in $(find -L $src -mindepth 1 -maxdepth 1 -type d | sort); do
+# find -L: 检查或打印有关文件的信息时, 所使用的信息取自链接指向的文件的属性, 而不是链接本身
+# -type d: 查找到文件类型为directory
+# | sort排序
   reader=$(basename $reader_dir)
+  # basename: only output the file name, not including the path
+  echo "${reader_dir}---${reader}"
   if ! [ $reader -eq $reader ]; then  # not integer.
-    echo "$0: unexpected subdirectory name $reader"
+  # 因为文件名是数字，所以可以直接取等号，-eq运算符两边只能是整数或整数字符串
     exit 1
   fi
 
@@ -44,7 +59,7 @@ for reader_dir in $(find -L $src -mindepth 1 -maxdepth 1 -type d | sort); do
     echo "Unexpected gender: '$reader_gender'"
     exit 1
   fi
-
+  exit 0
   for chapter_dir in $(find -L $reader_dir/ -mindepth 1 -maxdepth 1 -type d | sort); do
     chapter=$(basename $chapter_dir)
     if ! [ "$chapter" -eq "$chapter" ]; then

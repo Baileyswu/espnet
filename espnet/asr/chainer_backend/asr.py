@@ -502,7 +502,7 @@ def recog(args):
     else:
         model_module = "espnet.nets.chainer_backend.e2e_asr:E2E"
     model_class = dynamic_import(model_module)
-    model = model_class(idim, odim, train_args)
+    model = model_class(idim, odim, train_args)  # !!!初始化模型
     assert isinstance(model, ASRInterface)
     chainer_load(args.model, model)
 

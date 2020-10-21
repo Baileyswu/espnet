@@ -141,7 +141,7 @@ def get_parser(parser=None, required=True):
     )
     parser.add_argument(
         "--early-stop-criterion",
-        default="validation/main/loss",
+        default="validation/main/loss",  # validation/main/loss
         type=str,
         nargs="?",
         help="Value to monitor to trigger an early stopping of the training",

@@ -26,6 +26,24 @@ test_spm.model
 .vscode*
 *.vim
 *.swp
+*.png
+*.log
+*.npy
+data*.json
+*.txt
+*.trn
+*.best
+log
+data.json
+*.bak2
+*.ark
+*.scp
+*.ep.*
+*.cpp
+*.sgml
+*.gif
+*.pl
+tools
 
 # recipe related
 egs*/*/*/data*
@@ -39,6 +57,7 @@ egs*/*/*/mfcc
 egs*/*/*/stft
 egs*/*/*/tensorboard
 egs*/*/*/wav*
+egs/torgo/all_speaks_feats
 
 # tools related
 tools/bin
