@@ -1,0 +1,37 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "asr_train_multi",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/espnet/bin/asr_train_multi.py",
+            "args": [
+                "--config", "conf/train.yaml",
+                "--preprocess-conf", "conf/specaug.yaml",
+                "--ngpu", "2",
+                "--backend", "pytorch",
+                "--outdir", "exp/train_array_head_pytorch_train_specaug/results",
+                "--tensorboard-dir", "tensorboard/train_array_head_pytorch_train_specaug",
+                "--debugmode", "1",
+                "--dict", "data/lang_char/train_head_array_unigram5000_units.txt",
+                "--debugdir", "exp/train_array_head_pytorch_train_specaug",
+                "--minibatches","0", 
+                "--verbose", "1",
+                "--resume",
+                "--train-json-array", "dump/train_set_array/deltafalse/data_unigram5000.json",
+                "--valid-json-array", "dump/dev_set_array/deltafalse/data_unigram5000.json",
+                "--train-json-head", "dump/train_set_head/deltafalse/data_unigram5000.json",
+                "--valid-json-head", "dump/dev_set_head/deltafalse/data_unigram5000.json",
+                "--test-json-array", "dump/test_set_array/deltafalse/data_unigram5000.json",
+                "--test-json-head", "dump/test_set_head/deltafalse/data_unigram5000.json",
+                "--enc-init", "data/pretrained_model/model.val5.avg.best",
+                "--dec-init", "data/pretrained_model/model.val5.avg.best"
+            ],
+           "console": "integratedTerminal"
+        }
+    ]
+}

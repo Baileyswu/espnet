@@ -46,7 +46,7 @@ use_lm_valbest_average=false # if true, the validation `lm_n_average`-best langu
 # Set this to somewhere where you want to put your data, or where
 # someone else has already put it.  You'll want to change this
 # if you're not on the CLSP grid.
-datadir=/home/data/librispeech
+datadir=/home/data/TORGO
 
 # base url for downloads.
 data_url=www.openslr.org/resources/12
@@ -62,7 +62,7 @@ ndo=1230
 ndo=0 # 1190
 while read line; do
     ((ndo = ndo + 1))
-done </home/dingchaoyue/speech/dysarthria/espnet/egs/torgo_multi/asr1/data/lang_char/train_head_array_unigram${nbpe}_units.txt
+done < /home/danliwoo/gplab/espnet/egs/torgo_multi/asr1/data/lang_char/train_head_array_unigram${nbpe}_units.txt
 
 # exp tag
 tag="" # tag for managing experiments. 用于管理实验的标签。!!!
@@ -130,18 +130,18 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     echo "Stage 1: Feature Generation"
     fbankdir=fbank
     # Generate the fbank features; by default 80-dimensional fbanks with pitch on each frame
-    for x in data_org/F01/train data_org/F01/valid data_org/F01/test; do
+    for x in data_org/M04/train data_org/M04/valid data_org/M04/test; do
         steps/make_fbank_pitch.sh --cmd "$train_cmd" --nj ${nj} --write_utt2num_frames true \
             data/${x} exp/make_fbank/${x} ${fbankdir}
         utils/fix_data_dir.sh data/${x}
     done
 
-    utils/combine_data.sh --extra_files utt2num_frames data/${train_set_array}_org data/data_org/F01/train
-    utils/combine_data.sh --extra_files utt2num_frames data/${dev_set_array}_org data/data_org/F01/valid
-    utils/combine_data.sh --extra_files utt2num_frames data/${train_set_head}_org data/data_org/F01/train
-    utils/combine_data.sh --extra_files utt2num_frames data/${dev_set_head}_org data/data_org/F01/valid
-    utils/combine_data.sh --extra_files utt2num_frames data/${test_set_array}_org data/data_org/F01/test
-    utils/combine_data.sh --extra_files utt2num_frames data/${test_set_head}_org data/data_org/F01/test
+    utils/combine_data.sh --extra_files utt2num_frames data/${train_set_array}_org data/data_org/M04/train
+    utils/combine_data.sh --extra_files utt2num_frames data/${dev_set_array}_org data/data_org/M04/valid
+    utils/combine_data.sh --extra_files utt2num_frames data/${train_set_head}_org data/data_org/M04/train
+    utils/combine_data.sh --extra_files utt2num_frames data/${dev_set_head}_org data/data_org/M04/valid
+    utils/combine_data.sh --extra_files utt2num_frames data/${test_set_array}_org data/data_org/M04/test
+    utils/combine_data.sh --extra_files utt2num_frames data/${test_set_head}_org data/data_org/M04/test
 
     # remove utt having more than 3000 frames
     # remove utt having more than 400 character
@@ -279,8 +279,7 @@ lmexpname=train_rnnlm_${backend}_${lmtag}_${bpemode}${nbpe}_ngpu${ngpu}
 # train_rnnlm_pytorch_lm_unigram5000_ngpu1
 lmexpdir=exp/${lmexpname}
 mkdir -p ${lmexpdir}
-
-if [ ${stage} -le 10 ] && [ ${stop_stage} -ge 10 ]; then
+if [ ${stage} -le -10 ] && [ ${stop_stage} -ge 10 ]; then
     echo "stage 3: LM Preparation"
     lmdatadir=data/local/lm_train_${bpemode}${nbpe}
     # use external data
@@ -310,9 +309,8 @@ if [ ${stage} -le 10 ] && [ ${stop_stage} -ge 10 ]; then
         --resume ${lm_resume} \
         --dict ${dict} \
         --dump-hdf5-path ${lmdatadir}
+    echo "End Stage 3"
 fi
-
-echo "End Stage 3"
 
 if [ -z ${tag} ]; then
     # -z: string的长度为零则为真
@@ -333,8 +331,7 @@ else
 fi
 expdir=exp/${expname}
 # expdir=exp/train_array_head_pytorch_train_specaug
-mkdir -p ${expdir}
-
+mkdir -p ${expdir} ${expdir}/results
 if [ ${stage} -le 4 ] && [ ${stop_stage} -ge 4 ]; then
     echo "Stage 4: Network Training"
     ${cuda_cmd} --gpu ${ngpu} ${expdir}/train.log \
@@ -420,7 +417,7 @@ if [ ${stage} -le 5 ] && [ ${stop_stage} -ge 5 ]; then
             splitjson_multi.py --parts ${nj} ${feat_recog_dir_head}/data_${bpemode}${nbpe}.json
 
             #### use CPU for decoding
-            ngpu=1
+            ngpu=0
 
             # set batchsize 0 to disable batch decoding
             ${decode_cmd} JOB=1:${nj} ${expdir}/${decode_dir}/log/decode.JOB.log \

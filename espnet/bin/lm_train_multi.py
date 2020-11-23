@@ -189,7 +189,7 @@ def get_parser(parser=None, required=True):
 def main(cmd_args):
     """Train LM."""
 
-    # os.chdir("/home/dingchaoyue/speech/dysarthria/espnet/egs/torgo_multi/asr1/")
+    # os.chdir("/home/danliwoo/gplab/espnet/egs/torgo_multi/asr1/")
     os.system("pwd")
     os.environ["CUDA_VISIBLE_DEVICES"] = "4"   
     parser = get_parser()

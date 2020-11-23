@@ -23,7 +23,6 @@ shellcheck*
 check_shellcheck*
 test_spm.vocab
 test_spm.model
-.vscode*
 *.vim
 *.swp
 *.png

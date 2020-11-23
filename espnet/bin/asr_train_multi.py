@@ -543,9 +543,9 @@ def get_parser(parser=None, required=True):
 
 
 def main(cmd_args):
-    os.chdir("/home/dingchaoyue/speech/dysarthria/espnet/egs/torgo_multi/asr1/")
+    os.chdir("/home/danliwoo/gplab/espnet/egs/torgo_multi/asr1/")
     os.system("pwd")
-    os.environ["CUDA_VISIBLE_DEVICES"] = "5"
+    os.environ["CUDA_VISIBLE_DEVICES"] = "1, 2"
     """Run the main training function."""
     parser = get_parser()
     args, _ = parser.parse_known_args(cmd_args)

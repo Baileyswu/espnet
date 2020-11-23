@@ -258,7 +258,7 @@ def get_parser():
 
 def main(args):
 
-    os.chdir("/home/dingchaoyue/speech/dysarthria/espnet/egs/torgo_multi/asr1/")
+    os.chdir("/home/danliwoo/gplab/espnet/egs/torgo_multi/asr1/")
     os.system("pwd")
     os.environ["CUDA_VISIBLE_DEVICES"] = "5"
     # logging.info("***********running asr_recog.py***********")
