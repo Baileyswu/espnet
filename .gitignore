@@ -13,6 +13,7 @@ tmp*
 .hypothesis/
 .idea
 .pytest_cache/
+*checkpoints
 __pycache__/
 check_autopep8
 .coverage

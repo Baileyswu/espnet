@@ -12,13 +12,13 @@
             "args": [
                 "--config", "conf/train.yaml",
                 "--preprocess-conf", "conf/specaug.yaml",
-                "--ngpu", "2",
+                "--ngpu", "0",
                 "--backend", "pytorch",
-                "--outdir", "exp/train_array_head_pytorch_train_specaug/results",
-                "--tensorboard-dir", "tensorboard/train_array_head_pytorch_train_specaug",
+                "--outdir", "exp/debug_array_head_pytorch_train_specaug/results",
+                "--tensorboard-dir", "tensorboard/debug_array_head_pytorch_train_specaug",
                 "--debugmode", "1",
                 "--dict", "data/lang_char/train_head_array_unigram5000_units.txt",
-                "--debugdir", "exp/train_array_head_pytorch_train_specaug",
+                "--debugdir", "exp/debug_array_head_pytorch_train_specaug",
                 "--minibatches","0", 
                 "--verbose", "1",
                 "--resume",
@@ -31,7 +31,8 @@
                 "--enc-init", "data/pretrained_model/model.val5.avg.best",
                 "--dec-init", "data/pretrained_model/model.val5.avg.best"
             ],
-           "console": "integratedTerminal"
+           "console": "internalConsole",
+        //    "justMyCode": true
         }
     ]
 }
