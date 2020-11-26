@@ -65,7 +65,7 @@ from espnet.utils.io_utils_multi import LoadInputsAndTargets
 
 
 # from espnet.utils.training.batchfy import make_batchset
-from espnet.utils.training.batchfy_multi import make_batchset, match_data
+from espnet.utils.training.batchfy_multi import make_batchset, match_data, soft_match_data
 
 
 from espnet.utils.training.evaluator import BaseEvaluator

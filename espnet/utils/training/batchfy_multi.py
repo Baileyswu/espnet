@@ -510,15 +510,46 @@ def make_batchset(
     return batches
 
 
+def soft_match_data(json_array, json_head):
+    data_json = dict()
+    print("Length of  json_array is {}, Length of  json_head is {}; ".format(	
+        len(json_array.keys()), len(json_head.keys())))	
+    num_train = 0	
+    for key2 in json_head.keys():	
+        # head match e.g., 'FO1'	
+        # tail match e.g., '0013'	
+        if re.match(r"(.*)headMic(.*?).*",key2,re.M|re.I):	
+            head = key2[:3]	
+            tail = key2[-4:]	
+            if re.search(r'{0}(\S*){1}(.*?)'.format(head, tail), ' '.join(list(json_array.keys()))):	
+                num_train += 1	
+                key1 = re.search(r'{0}(\S*){1}(.*?)'.format(head, tail),	
+                                ' '.join(list(json_array.keys()))).group()	
+                # print("key1:{0} key2:{1}".format(key1,key2))	
+                assert json_array[key1]['output'] == json_head[key2]['output']	
+                data_json[key1 + "-" + key2] = {	
+                    "input": [{"array_feat": json_array[key1]['input'][0]["feat"],	
+                            "head_feat":json_head[key2]['input'][0]["feat"],	
+                            "array_shape":json_array[key1]['input'][0]["shape"],	
+                            "head_shape":json_head[key2]['input'][0]["shape"] ,	
+                            "name":"input1"}],	
+                    "output": json_head[key2]['output'],	
+                    "utt2spk": json_head[key2]['utt2spk']}	
+    print("Filter total number of training pair {} ".format(num_train))	
+    return data_json
+
+
 def match_data(json_array, json_head):
     data_json = dict()
     logging.info("Length of json_array is {}, Length of json_head is {}; ".format(
         len(json_array.keys()), len(json_head.keys())))
     num = 0
-    for key2 in json_head.keys():
-        if 'headMic' in key2:
-            key1 = key2.replace("head", "array")
-            if key1 in json_array.keys():
+    for key1 in json_array.keys():
+        if 'arrayMic' in key1:
+            key2 = key1.replace("array", "head")
+            if key2 not in json_head.keys():
+                key2 = key1
+            if key2 in json_head.keys():
                 num += 1
                 assert json_array[key1]['output'] == json_head[key2]['output']
                 data_json[key1 + "-" + key2] = {
@@ -527,8 +558,9 @@ def match_data(json_array, json_head):
                             "array_shape":json_array[key1]['input'][0]["shape"],
                             "head_shape":json_head[key2]['input'][0]["shape"] ,
                             "name":"input1"}],
-                    "output": json_head[key2]['output'],
-                    "utt2spk": json_head[key2]['utt2spk']}
+                    "output": json_array[key1]['output'],
+                    "utt2spk": json_array[key1]['utt2spk']}
     logging.info("Filter total number of training pair {} ".format(num))
     return data_json
 
+    
