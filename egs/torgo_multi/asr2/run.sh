@@ -62,7 +62,7 @@ ndo=1230
 ndo=0 # 1190
 while read line; do
     ((ndo = ndo + 1))
-done < /home/danliwoo/gplab/espnet/egs/torgo_multi/asr1/data/lang_char/train_head_array_unigram${nbpe}_units.txt
+done < /home/danliwoo/gplab/espnet/egs/torgo_multi/asr2/data/lang_char/train_head_array_unigram${nbpe}_units.txt
 
 # exp tag
 tag="" # tag for managing experiments. 用于管理实验的标签。!!!

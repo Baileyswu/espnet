@@ -1,3 +1,4 @@
+import re
 import itertools
 import logging
 
@@ -507,3 +508,27 @@ def make_batchset(
 
     # batch: List[List[Tuple[str, dict]]]
     return batches
+
+
+def match_data(json_array, json_head):
+    data_json = dict()
+    logging.info("Length of json_array is {}, Length of json_head is {}; ".format(
+        len(json_array.keys()), len(json_head.keys())))
+    num = 0
+    for key2 in json_head.keys():
+        if 'headMic' in key2:
+            key1 = key2.replace("head", "array")
+            if key1 in json_array.keys():
+                num += 1
+                assert json_array[key1]['output'] == json_head[key2]['output']
+                data_json[key1 + "-" + key2] = {
+                    "input": [{"array_feat": json_array[key1]['input'][0]["feat"],
+                            "head_feat":json_head[key2]['input'][0]["feat"],
+                            "array_shape":json_array[key1]['input'][0]["shape"],
+                            "head_shape":json_head[key2]['input'][0]["shape"] ,
+                            "name":"input1"}],
+                    "output": json_head[key2]['output'],
+                    "utt2spk": json_head[key2]['utt2spk']}
+    logging.info("Filter total number of training pair {} ".format(num))
+    return data_json
+

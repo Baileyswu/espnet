@@ -657,7 +657,7 @@ def train(args):
     # todo check
     train_json = match_data(train_json_array, train_json_head)
     valid_json = match_data(valid_json_array, valid_json_head)
-
+    
     use_sortagrad = args.sortagrad == -1 or args.sortagrad > 0
 
     # make minibatch list (variable length)
@@ -829,9 +829,6 @@ def train(args):
             "main/loss_ctc{}".format(i + 1) for i in range(model.num_encs)
         ] + ["validation/main/loss_ctc{}".format(i + 1) for i in range(model.num_encs)]
         report_keys_cer_ctc = [
-
-
-            
             "main/cer_ctc{}".format(i + 1) for i in range(model.num_encs)
         ] + ["validation/main/cer_ctc{}".format(i + 1) for i in range(model.num_encs)]
     trainer.extend(

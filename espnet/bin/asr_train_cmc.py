@@ -549,7 +549,7 @@ def get_parser(parser=None, required=True):
 
 
 def main(cmd_args):
-    os.chdir("/home/danliwoo/gplab/espnet/egs/torgo_multi/asr1/")
+    os.chdir("/home/danliwoo/gplab/espnet/egs/torgo_multi/asr2/")
     os.system("pwd")
     """Run the main training function."""
     parser = get_parser()
@@ -651,7 +651,7 @@ def main(cmd_args):
         if args.backend == "chainer":
             raise ValueError("Only pytorch is supported.")
         elif args.backend == "pytorch":
-            from espnet.asr.pytorch_backend.asr_multi import train
+            from espnet.asr.pytorch_backend.asr_cmc import train
 
             train(args)  # running this
         else:
