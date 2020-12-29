@@ -21,7 +21,7 @@ from espnet.nets.scorers.length_bonus import LengthBonus
 from espnet.utils.deterministic_utils import set_deterministic_pytorch
 
 # from espnet.utils.io_utils import LoadInputsAndTargets
-from espnet.utils.io_utils_multi import LoadInputsAndTargets
+from espnet.utils.io_utils_multi import LoadInputsAndTargets, match_data
 import re
 
 
@@ -152,34 +152,8 @@ def recog_v2(args):
     #     test_json_head = json.load(f)["utts"]
 
     test_json_query = dict(valid_json_array,**test_json_array)  
-
-    test_json_complete = dict()
-    print("Length of recog_json_array is {}, Length of recog_json_head is {}; ".format(
-        len(recog_json_array.keys()), len(recog_json_head.keys())))
-    num_test = 0
     
-    for key2 in recog_json_head.keys():
-        if re.match(r"(.*)headMic(.*?).*",key2,re.M|re.I):
-            # head match e.g., 'FO1'
-            # tail match e.g., '0013'
-            head = key2[:3]
-            tail = key2[-4:]
-            if re.search(r'{0}(\S*){1}(.*?)'.format(head, tail), ' '.join(list(test_json_query.keys()))):
-                num_test += 1
-                key1 = re.search(r'{0}(\S*){1}(.*?)'.format(head, tail),
-                                ' '.join(list(test_json_query.keys()))).group()
-                # print("key1:{0} key2:{1}".format(key1,key2))
-                # assert test_json_array[key1]['output'] == recog_json_head[key2]['output']
-                test_json_complete[key1 + "-" + key2] = {
-                    "input": [{"array_feat": test_json_query[key1]['input'][0]["feat"],
-                            "head_feat":recog_json_head[key2]['input'][0]["feat"],
-                            "array_shape":test_json_query[key1]['input'][0]["shape"],
-                            "head_shape":recog_json_head[key2]['input'][0]["shape"] ,
-                            "name":"input1"}],
-                    "output": recog_json_head[key2]['output'],
-                    "utt2spk": recog_json_head[key2]['utt2spk']}
-    print("Filter total number of training pair {} ".format(num_test))
-
+    test_json_complete = match_data(test_json_query, recog_json_head)
 
     # # 修改decoding的utt个数
     # test_json = {}

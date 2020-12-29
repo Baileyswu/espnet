@@ -47,27 +47,15 @@ from espnet.nets.pytorch_backend.streaming.segment import SegmentStreamingE2E
 from espnet.nets.pytorch_backend.streaming.window import WindowStreamingE2E
 from espnet.transform.spectrogram import IStft
 from espnet.transform.transformation import Transformation
+
 from espnet.utils.cli_writers import file_writer_helper
-
-# from espnet.utils.dataset import ChainerDataLoader
-# from espnet.utils.dataset import TransformDataset
-
 from espnet.utils.dataset_multi import ChainerDataLoader
 from espnet.utils.dataset_multi import TransformDataset
-
-
 from espnet.utils.deterministic_utils import set_deterministic_pytorch
 from espnet.utils.dynamic_import import dynamic_import
+from espnet.utils.io_utils_multi import LoadInputsAndTargets, match_data, soft_match_data
 
-# from espnet.utils.io_utils import LoadInputsAndTargets
-from espnet.utils.io_utils_multi import LoadInputsAndTargets
-
-
-
-# from espnet.utils.training.batchfy import make_batchset
-from espnet.utils.training.batchfy_multi import make_batchset, match_data, soft_match_data
-
-
+from espnet.utils.training.batchfy_multi import make_batchset
 from espnet.utils.training.evaluator import BaseEvaluator
 from espnet.utils.training.iterators import ShufflingEnabler
 from espnet.utils.training.tensorboard_logger import TensorboardLogger
@@ -296,12 +284,12 @@ class CustomConverter(object):
         # perform subsampling
         if self.subsampling_factor > 1:
             # xs = [x[:: self.subsampling_factor, :] for x in xs]
-            xs = [(x1[:: self.subsampling_factor, :],x2[:: self.subsampling_factor, :]) for x1,x2 in xs]
+            xs = [(x1[:: self.subsampling_factor, :], x2[:: self.subsampling_factor, :])
+                  for x1, x2 in xs]
 
         # get batch of lengths of input sequences
         array_ilens = np.array([x[0].shape[0] for x in xs])
         head_ilens = np.array([x[1].shape[0] for x in xs])
-
 
         # perform padding and convert to tensor
         # currently only support real number
@@ -319,13 +307,12 @@ class CustomConverter(object):
             # because torch.nn.DataParellel can't handle it.
             xs_pad = {"real": xs_pad_real, "imag": xs_pad_imag}
         else:
-            xs_pad_array = pad_list([torch.from_numpy(x).float() for x,_ in xs], 0).to(
+            xs_pad_array = pad_list([torch.from_numpy(x).float() for x, _ in xs], 0).to(
                 device, dtype=self.dtype
             )
-            xs_pad_head = pad_list([torch.from_numpy(x).float() for _,x in xs], 0).to(
+            xs_pad_head = pad_list([torch.from_numpy(x).float() for _, x in xs], 0).to(
                 device, dtype=self.dtype
             )
-
 
         ilens_array = torch.from_numpy(array_ilens).to(device)
         ilens_head = torch.from_numpy(head_ilens).to(device)
@@ -646,12 +633,11 @@ def train(args):
     with open(args.valid_json_head, "rb") as f:  # 读取验证集数据
         valid_json_head = json.load(f)["utts"]
 
-    # # Here test_json_array is equal to recog_json_array before split into gpus 
+    # # Here test_json_array is equal to recog_json_array before split into gpus
     # with open(args.test_json_array, "rb") as f:  # 读取测试集数据
     #     test_json_array = json.load(f)["utts"]
     # with open(args.test_json_head, "rb") as f:  # 读取测试集数据
     #     test_json_head = json.load(f)["utts"]
-
 
     # combine array dysarthric and head dysarthric
     # todo check
@@ -790,7 +776,7 @@ def train(args):
     #     )
     #     # cancel extend
     #     trainer.extend(att_reporter, trigger=(1, "epoch"))
- 
+
     # else:
     #     att_reporter = None
 
@@ -818,7 +804,7 @@ def train(args):
     #         ikey="output",
     #         iaxis=1,
     #     )
-    #     # cancel adding 
+    #     # cancel adding
     #     trainer.extend(ctc_reporter, trigger=(1, "epoch"))
     # else:
     #     ctc_reporter = None
@@ -829,9 +815,6 @@ def train(args):
             "main/loss_ctc{}".format(i + 1) for i in range(model.num_encs)
         ] + ["validation/main/loss_ctc{}".format(i + 1) for i in range(model.num_encs)]
         report_keys_cer_ctc = [
-
-
-            
             "main/cer_ctc{}".format(i + 1) for i in range(model.num_encs)
         ] + ["validation/main/cer_ctc{}".format(i + 1) for i in range(model.num_encs)]
     trainer.extend(
