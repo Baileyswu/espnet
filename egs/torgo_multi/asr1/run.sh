@@ -130,18 +130,18 @@ if [ ${stage} -le 1 ] && [ ${stop_stage} -ge 1 ]; then
     echo "Stage 1: Feature Generation"
     fbankdir=fbank
     # Generate the fbank features; by default 80-dimensional fbanks with pitch on each frame
-    for x in data_org/M04/train data_org/M04/valid data_org/M04/test; do
+    for x in data_org/F04/train data_org/F04/valid data_org/F04/test; do
         steps/make_fbank_pitch.sh --cmd "$train_cmd" --nj ${nj} --write_utt2num_frames true \
             data/${x} exp/make_fbank/${x} ${fbankdir}
         utils/fix_data_dir.sh data/${x}
     done
 
-    utils/combine_data.sh --extra_files utt2num_frames data/${train_set_array}_org data/data_org/M04/train
-    utils/combine_data.sh --extra_files utt2num_frames data/${dev_set_array}_org data/data_org/M04/valid
-    utils/combine_data.sh --extra_files utt2num_frames data/${train_set_head}_org data/data_org/M04/train
-    utils/combine_data.sh --extra_files utt2num_frames data/${dev_set_head}_org data/data_org/M04/valid
-    utils/combine_data.sh --extra_files utt2num_frames data/${test_set_array}_org data/data_org/M04/test
-    utils/combine_data.sh --extra_files utt2num_frames data/${test_set_head}_org data/data_org/M04/test
+    utils/combine_data.sh --extra_files utt2num_frames data/${train_set_array}_org data/data_org/F04/train
+    utils/combine_data.sh --extra_files utt2num_frames data/${dev_set_array}_org data/data_org/F04/valid
+    utils/combine_data.sh --extra_files utt2num_frames data/${train_set_head}_org data/data_org/F04/train
+    utils/combine_data.sh --extra_files utt2num_frames data/${dev_set_head}_org data/data_org/F04/valid
+    utils/combine_data.sh --extra_files utt2num_frames data/${test_set_array}_org data/data_org/F04/test
+    utils/combine_data.sh --extra_files utt2num_frames data/${test_set_head}_org data/data_org/F04/test
 
     # remove utt having more than 3000 frames
     # remove utt having more than 400 character

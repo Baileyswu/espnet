@@ -15,7 +15,7 @@ from typing import Tuple
 import torch
 
 from espnet.nets.pytorch_backend.nets_utils import rename_state_dict
-from espnet.nets.pytorch_backend.transformer.attention import MultiHeadedAttention
+from espnet.nets.pytorch_backend.transformer.attention import MultiHeadedAttention, MultiHeadedCrossAttention
 from espnet.nets.pytorch_backend.transformer.decoder_layer import DecoderLayer
 from espnet.nets.pytorch_backend.transformer.dynamic_conv import DynamicConvolution
 from espnet.nets.pytorch_backend.transformer.dynamic_conv2d import DynamicConvolution2D
@@ -138,6 +138,23 @@ class Decoder(BatchScorerInterface, torch.nn.Module):
                     normalize_before,
                     concat_after,
                 ),
+            )
+        elif selfattention_layer_type == "crossattn":
+            logging.info("decoder self-attention layer type = cross-attention")
+            self.decoders = repeat(
+                num_blocks,
+                lambda lnum: DecoderLayer(
+                    attention_dim,
+                    MultiHeadedAttention(
+                        attention_heads, attention_dim, self_attention_dropout_rate
+                    ),
+                    MultiHeadedAttention(
+                        attention_heads, attention_dim, src_attention_dropout_rate
+                    ),
+                    MultiHeadedCrossAttention(
+                        attention_heads, attention_dim, cross_attention_dropout_rate
+                    ),
+                )
             )
         elif selfattention_layer_type == "lightconv":
             logging.info("decoder self-attention layer type = lightweight convolution")

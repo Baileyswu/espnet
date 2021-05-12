@@ -11,7 +11,7 @@ import torch
 
 from espnet.nets.pytorch_backend.nets_utils import rename_state_dict
 from espnet.nets.pytorch_backend.transducer.vgg2l import VGG2L
-from espnet.nets.pytorch_backend.transformer.attention import MultiHeadedAttention
+from espnet.nets.pytorch_backend.transformer.attention import MultiHeadedAttention, MultiHeadedCrossAttention
 from espnet.nets.pytorch_backend.transformer.dynamic_conv import DynamicConvolution
 from espnet.nets.pytorch_backend.transformer.dynamic_conv2d import DynamicConvolution2D
 from espnet.nets.pytorch_backend.transformer.embedding import PositionalEncoding
@@ -158,6 +158,21 @@ class Encoder(torch.nn.Module):
                     normalize_before,
                     concat_after,
                 ),
+            )
+        elif selfattention_layer_type == "crossatt":
+            logging.info("encoder cross-attention layer type = cross-attention")
+            self.encoders = repeat(
+                num_blocks,
+                lambda lnum: EncoderLayer(
+                    attention_dim,
+                    MultiHeadedCrossAttention(
+                      attention_heads, attention_dim, attention_dropout_rate  
+                    ),
+                    positionwise_layer(*positionwise_layer_args),
+                    dropout_rate,
+                    normalize_before,
+                    concat_after,
+                )
             )
         elif selfattention_layer_type == "lightconv":
             logging.info("encoder self-attention layer type = lightweight convolution")

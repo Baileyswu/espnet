@@ -358,13 +358,13 @@ class E2E(ASRInterface, torch.nn.Module):
         
         hs_pad_head, hs_mask_head = self.encoder(xs_pad_head, src_mask)
 
-
+        # cross attention
         cross_array_head, _cross_att_score = self.array_head_cross(
             hs_pad_array, hs_pad_head, hs_pad_head)
         cross_head_array, _cross_att_score = self.head_array_cross(
             hs_pad_head, hs_pad_array, hs_pad_array)
 
-
+        # self attention
         att_array, _att_score = self.array_att(
             cross_array_head, cross_array_head, cross_array_head)
         att_head, _att_score = self.head_att(

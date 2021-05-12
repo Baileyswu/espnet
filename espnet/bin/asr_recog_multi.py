@@ -321,17 +321,14 @@ def main(args):
     logging.info("backend = " + args.backend)
     if args.num_spkrs == 1:
         if args.backend == "chainer":
-            from espnet.asr.chainer_backend.asr_multi import recog
-
-            recog(args)
+            raise ValueError("Only pytorch is supported.")
         elif args.backend == "pytorch":
             if args.num_encs == 1:
                 # Experimental API that supports custom LMs
                 if args.api == "v2":
                     logging.info("api==%s"%args.api)
                     from espnet.asr.pytorch_backend.recog_multi import recog_v2
-                    # logging.warning("***********reding recog_v2***********")
-                    # print("***********reding recog_v2***********")
+                    logging.info("***********reading recog_v2***********")
                     recog_v2(args)
                     
                 else:
